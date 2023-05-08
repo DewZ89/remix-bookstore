@@ -1,6 +1,6 @@
 import type { ActionArgs, LoaderArgs, V2_MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { Form, Link, useActionData, useNavigation, useSearchParams, useTransition } from '@remix-run/react'
+import { Form, Link, useActionData, useNavigation, useSearchParams } from '@remix-run/react'
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 
 import { createUser, getUserByEmail, getUserByUsername } from '~/models/user.server'
