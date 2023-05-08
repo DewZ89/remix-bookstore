@@ -1,11 +1,24 @@
 import type { ActionArgs, LoaderArgs, V2_MetaFunction } from '@remix-run/node'
 import { json, redirect } from '@remix-run/node'
-import { Form, Link, useActionData, useSearchParams } from '@remix-run/react'
-import { useEffect, useRef } from 'react'
+import {
+  Form,
+  Link,
+  useActionData,
+  useNavigation,
+  useSearchParams,
+} from '@remix-run/react'
 
 import { verifyLogin } from '~/models/user.server'
 import { createUserSession, getUserId } from '~/session.server'
 import { safeRedirect, validateEmail } from '~/utils'
+import invariant from 'tiny-invariant'
+
+type ActionData = {
+  errors: {
+    email: string | null
+    password: string | null
+  }
+}
 
 export const meta: V2_MetaFunction = () => [{ title: 'Login' }]
 
@@ -22,39 +35,26 @@ export const action = async ({ request }: ActionArgs) => {
   const redirectTo = safeRedirect(formData.get('redirectTo'), '/')
   const remember = formData.get('remember')
 
-  if (!validateEmail(email)) {
-    return json(
-      { errors: { email: 'Email is invalid', password: null } },
-      { status: 400 }
-    )
-  }
+  invariant(typeof email === 'string', 'Email is required')
+  invariant(typeof password === 'string', 'Password is required')
 
-  if (typeof password !== 'string' || password.length === 0) {
-    return json(
-      { errors: { email: null, password: 'Password is required' } },
-      { status: 400 }
-    )
-  }
-
-  if (password.length < 8) {
-    return json(
-      { errors: { email: null, password: 'Password is too short' } },
-      { status: 400 }
-    )
+  const errors: ActionData['errors'] = {
+    email: !validateEmail(email) ? 'Email is invalid' : null,
+    password: !password ? 'Password is required' : null,
   }
 
   const user = await verifyLogin(email, password)
 
-  if (!user) {
-    return json(
-      { errors: { email: 'Invalid email or password', password: null } },
-      { status: 400 }
-    )
-  }
+  errors.email = !user ? 'Invalid email or password' : null
+
+  if (Object.values(errors).some((value) => value !== null))
+    return json<ActionData>({ errors })
+
+  invariant(user !== null, 'User must be defined')
 
   return createUserSession({
     redirectTo,
-    remember: remember === 'on' ? true : false,
+    remember: remember === 'on',
     request,
     userId: user.id,
   })
@@ -63,21 +63,14 @@ export const action = async ({ request }: ActionArgs) => {
 export default function LoginPage() {
   const [searchParams] = useSearchParams()
   const redirectTo = searchParams.get('redirectTo') || '/notes'
-  const actionData = useActionData<typeof action>()
-  const emailRef = useRef<HTMLInputElement>(null)
-  const passwordRef = useRef<HTMLInputElement>(null)
+  const { errors } = useActionData<ActionData>() || {}
 
-  useEffect(() => {
-    if (actionData?.errors?.email) {
-      emailRef.current?.focus()
-    } else if (actionData?.errors?.password) {
-      passwordRef.current?.focus()
-    }
-  }, [actionData])
+  const { state } = useNavigation()
+  const submitting = state === 'loading' || 'submitting'
 
   return (
     <div className='flex min-h-full flex-col justify-center bg-gray-50'>
-      <div className='transition-tranform mx-auto my-4 w-full text-center max-w-md origin-bottom-left text-2xl tracking-wide duration-75 hover:-rotate-2'>
+      <div className='transition-tranform mx-auto my-4 w-full max-w-md origin-bottom-left text-center text-2xl tracking-wide duration-75 hover:-rotate-2'>
         Login to enjoy Bookstore!
       </div>
       <div className='border-1 mx-auto w-full max-w-md rounded-md border-gray-500 bg-slate-100 px-10 py-8 opacity-90 shadow'>
@@ -91,22 +84,21 @@ export default function LoginPage() {
             </label>
             <div className='mt-1'>
               <input
-                ref={emailRef}
                 id='email'
                 required
                 autoFocus={true}
                 name='email'
                 type='email'
                 autoComplete='email'
-                aria-invalid={actionData?.errors?.email ? true : undefined}
+                aria-invalid={errors?.email ? true : undefined}
                 aria-describedby='email-error'
                 className='w-full rounded border border-gray-500 px-2 py-1 text-lg'
               />
-              {actionData?.errors?.email ? (
+              {!!errors?.email && (
                 <div className='pt-1 text-red-700' id='email-error'>
-                  {actionData.errors.email}
+                  {errors.email}
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
 
@@ -120,28 +112,27 @@ export default function LoginPage() {
             <div className='mt-1'>
               <input
                 id='password'
-                ref={passwordRef}
                 name='password'
                 type='password'
                 autoComplete='current-password'
-                aria-invalid={actionData?.errors?.password ? true : undefined}
+                aria-invalid={errors?.password ? true : undefined}
                 aria-describedby='password-error'
                 className='w-full rounded border border-gray-500 px-2 py-1 text-lg'
               />
-              {actionData?.errors?.password ? (
+              {!!errors?.password && (
                 <div className='pt-1 text-red-700' id='password-error'>
-                  {actionData.errors.password}
+                  {errors.password}
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
 
           <input type='hidden' name='redirectTo' value={redirectTo} />
           <button
             type='submit'
-            className='w-full rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:bg-blue-400'
+            className='w-full rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:bg-blue-400 active:bg-blue-700 disabled:bg-blue-200'
           >
-            Log in
+            {submitting ? 'Login...' : 'Log In'}
           </button>
           <div className='flex items-center justify-between'>
             <div className='flex items-center'>
