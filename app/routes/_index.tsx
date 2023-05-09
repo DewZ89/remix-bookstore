@@ -32,7 +32,7 @@ export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData()
   const email = formData.get('email')
   const password = formData.get('password')
-  const redirectTo = safeRedirect(formData.get('redirectTo'), '/')
+  const redirectTo = safeRedirect(formData.get('redirectTo'), '/dashboard')
   const remember = formData.get('remember')
 
   invariant(typeof email === 'string', 'Email is required')
@@ -62,7 +62,7 @@ export const action = async ({ request }: ActionArgs) => {
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') || '/notes'
+  const redirectTo = searchParams.get('redirectTo') || '/dashboard'
   const { errors } = useActionData<ActionData>() || {}
 
   const { state } = useNavigation()
