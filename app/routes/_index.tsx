@@ -24,7 +24,7 @@ export const meta: V2_MetaFunction = () => [{ title: 'Login' }]
 
 export const loader = async ({ request }: LoaderArgs) => {
   const userId = await getUserId(request)
-  if (userId) return redirect('/')
+  if (userId) return redirect('/dashboard')
   return json({})
 }
 
