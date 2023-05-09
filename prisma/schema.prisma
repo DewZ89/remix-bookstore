@@ -12,6 +12,9 @@ model User {
   username String @unique
   email    String @unique
 
+  books   Book[]
+  authors Author[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -36,4 +39,34 @@ model Note {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId String
+}
+
+model Book {
+  isbn        String   @id
+  title       String
+  summary     String
+  publishedAt DateTime
+
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  authorId String
+
+  creator User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  userId  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Author {
+  id   String @id @default(cuid())
+  name String
+  bio  String
+
+  creator User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  userId  String
+
+  books Book[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
