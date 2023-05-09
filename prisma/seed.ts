@@ -57,15 +57,15 @@ async function seed() {
           {
             isbn: '978-2-3260-0286-9',
             creator: { connect: { id: user.id } },
-            summary: 'Pratice clean agile',
+            summary: 'Practice clean agile',
             title: 'Clean Agile',
             publishedAt: new Date('2021-07-01'),
           },
           {
             isbn: '978-2-3260-0287-9',
             creator: { connect: { id: user.id } },
-            summary: 'Clean Architecture',
-            title: 'Become a pro of clean software architecture',
+            summary: 'Become a pro of clean software architecture',
+            title: 'Clean Architecture',
             publishedAt: new Date('2021-05-01'),
           },
         ],
