@@ -40,7 +40,7 @@ export const action = async ({ request }: ActionArgs) => {
   const email = formData.get('email')
   const password = formData.get('password')
   const username = formData.get('username')
-  const redirectTo = safeRedirect(formData.get('redirectTo'), '/notes')
+  const redirectTo = safeRedirect(formData.get('redirectTo'), '/dashboard')
 
   invariant(typeof email === 'string', 'Email is required')
   invariant(typeof username === 'string', 'Username is required')
