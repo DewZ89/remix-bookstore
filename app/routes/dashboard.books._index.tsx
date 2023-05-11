@@ -1,7 +1,7 @@
 import { json } from '@remix-run/node'
 import { getBooksWithAuthor } from '~/models/book.server'
 
-import { LoaderArgs, LoaderFunction } from '@remix-run/node'
+import type { LoaderArgs, LoaderFunction } from '@remix-run/node'
 import { Link, useLoaderData } from '@remix-run/react'
 
 type LoaderData = {
