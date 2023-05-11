@@ -105,7 +105,7 @@ export default function AuthorForm() {
   const isEditing = isTransitionning && formData?.get('_action') === 'update'
   const isCreating = isTransitionning && formData?.get('_action') === 'new'
   const isDeleting = isTransitionning && formData?.get('_action') === 'delete'
-  const isNewAuthor = !Boolean(author)
+  const isNewAuthor = !!author
 
   return (
     <div className='flex flex-col space-y-4'>
