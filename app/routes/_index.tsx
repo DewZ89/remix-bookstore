@@ -66,7 +66,7 @@ export default function LoginPage() {
   const { errors } = useActionData<ActionData>() || {}
 
   const { state } = useNavigation()
-  const submitting = state === 'loading' || 'submitting'
+  const submitting = ['loading', 'submitting'].includes(state)
 
   return (
     <div className='flex min-h-full flex-col justify-center bg-gray-50'>
