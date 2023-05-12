@@ -90,6 +90,7 @@ export default function LoginPage() {
                 name='email'
                 type='email'
                 autoComplete='email'
+                defaultValue='admin@remix.run'
                 aria-invalid={errors?.email ? true : undefined}
                 aria-describedby='email-error'
                 className='w-full rounded border border-gray-500 px-2 py-1 text-lg'
@@ -114,6 +115,7 @@ export default function LoginPage() {
                 id='password'
                 name='password'
                 type='password'
+                defaultValue='password'
                 autoComplete='current-password'
                 aria-invalid={errors?.password ? true : undefined}
                 aria-describedby='password-error'
