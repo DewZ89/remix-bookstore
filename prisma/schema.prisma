@@ -44,7 +44,7 @@ model Note {
 model Book {
   isbn        String   @id
   title       String
-  summary     String
+  summary     String?
   publishedAt DateTime
 
   author   Author @relation(fields: [authorId], references: [id], onDelete: Restrict, onUpdate: Cascade)

@@ -4,6 +4,8 @@ import type { LoaderArgs, LoaderFunction } from '@remix-run/node'
 import { Link, useFetcher, useLoaderData } from '@remix-run/react'
 import { getAuthorsWithBookCount } from '~/models/author.server'
 
+import { excerpt } from '~/utils'
+
 type LoaderData = {
   authors: Awaited<ReturnType<typeof getAuthorsWithBookCount>>
 }
@@ -20,14 +22,10 @@ export default function AuthorListPage() {
   const { authors } = useLoaderData<LoaderData>()
   const fetcher = useFetcher()
 
-  function excerpt(str: string, count: number = 50) {
-    if (!str) return str
-    return `${str.slice(0, count)}...`
-  }
-
   return (
-    <div className='flex flex-col space-y-4'>
-      <div className=' flex justify-end'>
+    <div className='flex max-w-full flex-col space-y-4'>
+      <div className=' flex items-center justify-between'>
+        <h2 className='text-2xl'>Authors List</h2>
         <Link
           className='rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:bg-blue-400 active:bg-blue-700 disabled:bg-blue-200'
           to='new'
@@ -66,13 +64,20 @@ export default function AuthorListPage() {
                     >
                       <Link
                         prefetch='intent'
-                        className='inline-block  uppercase font-bold text-blue-600 hover:underline'
+                        className='inline-block  font-bold uppercase text-blue-600 hover:underline'
                         to={author.id}
                       >
                         Edit
                       </Link>
-                      <fetcher.Form className='inline-block' method='delete' action={`${author.id}/delete`}>
-                        <button type='submit' className='font-bold text-red-600 hover:underline uppercase'>
+                      <fetcher.Form
+                        className='inline-block'
+                        method='delete'
+                        action={`${author.id}/delete`}
+                      >
+                        <button
+                          type='submit'
+                          className='font-bold uppercase text-red-600 hover:underline'
+                        >
                           Delete
                         </button>
                       </fetcher.Form>

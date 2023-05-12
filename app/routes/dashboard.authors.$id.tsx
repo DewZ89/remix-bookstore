@@ -95,17 +95,15 @@ export default function AuthorForm() {
   const isLoading = state === 'loading'
   const isSubmitting = state === 'submitting'
 
-  console.log({ formData: formData?.get('_action') })
-
-  const isTransitionning = isSubmitting || isLoading
+  const isTransitioning = isSubmitting || isLoading
 
   const { author } = useLoaderData<LoaderData>()
   const { errors } = useActionData<ActionData>() || {}
 
-  const isEditing = isTransitionning && formData?.get('_action') === 'update'
-  const isCreating = isTransitionning && formData?.get('_action') === 'new'
-  const isDeleting = isTransitionning && formData?.get('_action') === 'delete'
-  const isNewAuthor = !!author
+  const isEditing = isTransitioning && formData?.get('_action') === 'update'
+  const isCreating = isTransitioning && formData?.get('_action') === 'new'
+  const isDeleting = isTransitioning && formData?.get('_action') === 'delete'
+  const isNewAuthor = !author
 
   return (
     <div className='flex flex-col space-y-4'>
@@ -174,7 +172,7 @@ export default function AuthorForm() {
         <div className='flex justify-end space-x-4'>
           {!isNewAuthor && (
             <button
-              disabled={isTransitionning}
+              disabled={isTransitioning}
               type='submit'
               value='delete'
               name='_action'
@@ -188,12 +186,12 @@ export default function AuthorForm() {
             name='_action'
             value={author ? 'update' : 'new'}
             type='submit'
-            disabled={isTransitionning}
+            disabled={isTransitioning}
             className='rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:bg-blue-400 active:bg-blue-700 disabled:bg-blue-200'
           >
             {isEditing ? 'Updating author' : null}
-            {isCreating ? 'Creating author' : null}
-            {isNewAuthor && !isCreating && !isEditing ? 'Create author' : null}
+            {isCreating ? 'Adding author' : null}
+            {isNewAuthor && !isCreating && !isEditing ? 'Add author' : null}
             {!isNewAuthor && !isCreating && !isEditing ? 'Update author' : null}
           </button>
         </div>

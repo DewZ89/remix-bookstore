@@ -1,11 +1,19 @@
+import type { Prisma } from '@prisma/client'
 import { prisma } from '~/db.server'
-import { Prisma } from '@prisma/client'
 
 export type { Author } from '@prisma/client'
 
 export function getAuthorsWithBookCount() {
   return prisma.author.findMany({
     include: { _count: { select: { books: true } } },
+    orderBy: { name: 'asc' },
+  })
+}
+
+export function getAuthorsList() {
+  return prisma.author.findMany({
+    orderBy: { name: 'asc' },
+    select: { name: true, id: true },
   })
 }
 
