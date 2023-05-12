@@ -13,7 +13,6 @@ export const loader = async ({ request }: LoaderArgs) => {
 }
 
 export default function DashboardPage() {
-  const data = useLoaderData<typeof loader>()
   const user = useUser()
 
   return (

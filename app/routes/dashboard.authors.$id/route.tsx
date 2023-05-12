@@ -4,34 +4,12 @@ import {
   useLoaderData,
   useNavigation,
 } from '@remix-run/react'
-import type {
-  ActionFunction,
-  V2_MetaFunction,
-  LoaderFunction,
-} from '@remix-run/node'
-import { json, redirect } from '@remix-run/node'
-import invariant from 'tiny-invariant'
-import { z } from 'zod'
-import type { ZodError } from 'zod'
+import type { V2_MetaFunction } from '@remix-run/node'
 
-import {
-  createAuthor,
-  deleteAuthor,
-  getAuthorById,
-  updateAuthor,
-} from '~/models/author.server'
-import { getUser, requireUser } from '~/session.server'
-
-type ActionData = {
-  errors: {
-    name?: ZodError | null
-    bio?: ZodError | null
-  }
-}
-
-type LoaderData = {
-  author?: Awaited<ReturnType<typeof getAuthorById>>
-}
+import { loaderFn } from './loader'
+import type { LoaderData } from './loader'
+import type { ActionData } from './action'
+import { actionFn } from './action'
 
 export const meta: V2_MetaFunction = ({ data: { author } }) => {
   let title = 'Create author'
@@ -42,53 +20,9 @@ export const meta: V2_MetaFunction = ({ data: { author } }) => {
   return [{ title }]
 }
 
-export const loader: LoaderFunction = async ({ request, params }) => {
-  await requireUser(request)
-  const id = params.id
+export const loader = loaderFn
 
-  if (id && id !== 'new') {
-    const author = await getAuthorById(id)
-    return json<LoaderData>({ author })
-  }
-
-  return json<LoaderData>({})
-}
-
-export const action: ActionFunction = async ({ params, request }) => {
-  const formData = await request.formData()
-  const name = formData.get('name')
-  const bio = formData.get('bio')
-  const action = formData.get('_action')
-
-  const id = params.id
-  const user = await getUser(request)
-
-  invariant(id, 'Id param is required')
-  invariant(typeof action === 'string', 'Action is required')
-  invariant(user !== null, 'User is required')
-  invariant(typeof name === 'string', 'Name is required')
-  invariant(typeof bio === 'string', 'Bio is required')
-
-  const nameValidationResult = z.coerce
-    .string()
-    .min(6, { message: 'Name must contains at least 6 chars' })
-    .safeParse(name)
-  const bioValidationResult = z.coerce.string().optional().safeParse(bio)
-
-  const errors: ActionData['errors'] = {
-    name: nameValidationResult.success ? null : nameValidationResult.error,
-    bio: bioValidationResult.success ? null : bioValidationResult.error,
-  }
-
-  if (Object.values(errors).some((value) => value !== null))
-    return json<ActionData>({ errors }, { status: 400 })
-
-  if (action === 'new') await createAuthor({ userId: user.id, name, bio })
-  if (action === 'update') await updateAuthor(id, { name, bio })
-  if (action === 'delete') await deleteAuthor(id)
-
-  return redirect('/dashboard/authors')
-}
+export const action = actionFn
 
 export default function AuthorForm() {
   const { state, formData } = useNavigation()
