@@ -67,9 +67,7 @@ export default function AuthorForm() {
                 id='name-error'
                 className='pt-1 text-sm text-red-700'
               >
-                {errors.name.issues.map((error) => (
-                  <p key={error.code}>{error.message}</p>
-                ))}
+                {errors.name}
               </div>
             )}
           </div>
@@ -95,9 +93,7 @@ export default function AuthorForm() {
                 id='name-error'
                 className='pt-1 text-sm text-red-700'
               >
-                {errors.bio.issues.map((error) => (
-                  <p key={error.code}>{error.message}</p>
-                ))}
+                {errors.bio}
               </div>
             )}
           </div>

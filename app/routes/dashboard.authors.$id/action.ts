@@ -3,52 +3,65 @@ import { json, redirect } from '@remix-run/node'
 import invariant from 'tiny-invariant'
 import type { ZodError } from 'zod'
 import { z } from 'zod'
+import { zx } from 'zodix'
 import {
   createAuthor,
   deleteAuthor,
   updateAuthor,
 } from '~/models/author.server'
 import { getUser } from '~/session.server'
+import { errorAtPath } from '~/utils'
 
 export type ActionData = {
   errors: {
-    name?: ZodError | null
-    bio?: ZodError | null
+    name?: string
+    bio?: string
+  }
+}
+
+const authorSchema = z.object({
+  name: z.coerce.string().min(6, 'Name must contains at least 6 chars'),
+  bio: z.coerce.string().optional(),
+  _action: z.coerce.string(),
+})
+
+type AuthorSchema = z.infer<typeof authorSchema>
+
+function buildErrors(errors: ZodError): ActionData['errors'] {
+  return {
+    name: errorAtPath<AuthorSchema>(errors, 'name'),
+    bio: errorAtPath<AuthorSchema>(errors, 'bio'),
   }
 }
 
 export const actionFn: ActionFunction = async ({ params, request }) => {
-  const formData = await request.formData()
-  const name = formData.get('name')
-  const bio = formData.get('bio')
-  const action = formData.get('_action')
+  const parseResults = await zx.parseFormSafe(request, authorSchema)
 
   const id = params.id
   const user = await getUser(request)
 
   invariant(id, 'Id param is required')
-  invariant(typeof action === 'string', 'Action is required')
   invariant(user !== null, 'User is required')
-  invariant(typeof name === 'string', 'Name is required')
-  invariant(typeof bio === 'string', 'Bio is required')
 
-  const nameValidationResult = z.coerce
-    .string()
-    .min(6, { message: 'Name must contains at least 6 chars' })
-    .safeParse(name)
-  const bioValidationResult = z.coerce.string().optional().safeParse(bio)
-
-  const errors: ActionData['errors'] = {
-    name: nameValidationResult.success ? null : nameValidationResult.error,
-    bio: bioValidationResult.success ? null : bioValidationResult.error,
+  if (!parseResults.success) {
+    return json<ActionData>(
+      { errors: buildErrors(parseResults.error) },
+      { status: 400 }
+    )
   }
 
-  if (Object.values(errors).some((value) => value !== null))
-    return json<ActionData>({ errors }, { status: 400 })
+  const data = parseResults.success ? parseResults.data : null
+  invariant(data !== null, 'Data cannot be null')
 
-  if (action === 'new') await createAuthor({ userId: user.id, name, bio })
-  if (action === 'update') await updateAuthor(id, { name, bio })
-  if (action === 'delete') await deleteAuthor(id)
+  if (data._action === 'new')
+    await createAuthor({
+      userId: user.id,
+      name: data.name,
+      bio: String(data.bio),
+    })
+  if (data._action === 'update')
+    await updateAuthor(id, { name: data.name, bio: data.bio })
+  if (data._action === 'delete') await deleteAuthor(id)
 
   return redirect('/dashboard/authors')
 }

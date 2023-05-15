@@ -1,5 +1,6 @@
 import { useMatches } from '@remix-run/react'
 import { useMemo } from 'react'
+import type { ZodError } from 'zod'
 
 import type { User } from '~/models/user.server'
 
@@ -73,4 +74,8 @@ export function validateEmail(email: unknown): email is string {
 export function excerpt(str: string, count: number = 50) {
   if (!str) return str
   return `${str.slice(0, count)}...`
+}
+
+export function errorAtPath<K>(error: ZodError, path: keyof K) {
+  return error.issues.find((issue) => issue.path[0] === path)?.message
 }

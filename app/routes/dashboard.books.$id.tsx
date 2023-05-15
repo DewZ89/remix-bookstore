@@ -23,6 +23,7 @@ import {
   updateBook,
 } from '~/models/book.server'
 import { getUser } from '~/session.server'
+import { errorAtPath } from '~/utils'
 
 const bookSchema = z.object({
   isbn: z.coerce.string(),
@@ -61,17 +62,13 @@ export const meta: V2_MetaFunction = ({ data }) => {
   return [{ title }]
 }
 
-function errorAtPath<T extends keyof BookSchema>(error: ZodError, path: T) {
-  return error.issues.find((issue) => issue.path[0] === path)?.message
-}
-
 function buildErrors(error: ZodError) {
   return {
-    authorId: errorAtPath(error, 'authorId'),
-    isbn: errorAtPath(error, 'isbn'),
-    publishedAt: errorAtPath(error, 'publishedAt'),
-    summary: errorAtPath(error, 'summary'),
-    title: errorAtPath(error, 'title'),
+    authorId: errorAtPath<BookSchema>(error, 'authorId'),
+    isbn: errorAtPath<BookSchema>(error, 'isbn'),
+    publishedAt: errorAtPath<BookSchema>(error, 'publishedAt'),
+    summary: errorAtPath<BookSchema>(error, 'summary'),
+    title: errorAtPath<BookSchema>(error, 'title'),
   }
 }
 
