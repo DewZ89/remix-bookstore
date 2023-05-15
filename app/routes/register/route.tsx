@@ -1,5 +1,4 @@
-import type { ActionArgs, LoaderArgs, V2_MetaFunction } from '@remix-run/node'
-import { json, redirect } from '@remix-run/node'
+import type { V2_MetaFunction } from '@remix-run/node'
 import {
   Form,
   Link,
@@ -10,76 +9,12 @@ import {
 import { useState } from 'react'
 import type { ChangeEvent } from 'react'
 
-import {
-  createUser,
-  getUserByEmail,
-  getUserByUsername,
-} from '~/models/user.server'
-import { createUserSession, getUserId } from '~/session.server'
-import { safeRedirect, validateEmail } from '~/utils'
-import invariant from 'tiny-invariant'
+import { actionFn } from './action'
+import type { ActionData } from './action'
+import { loaderFn } from './loader'
 
-type FormError = {
-  username?: string | null
-  email?: string | null
-  password?: string | null
-}
-
-type ActionData = {
-  errors: FormError
-}
-
-export const loader = async ({ request }: LoaderArgs) => {
-  const userId = await getUserId(request)
-  if (userId) return redirect('/')
-  return json({})
-}
-
-export const action = async ({ request }: ActionArgs) => {
-  const formData = await request.formData()
-  const email = formData.get('email')
-  const password = formData.get('password')
-  const username = formData.get('username')
-  const redirectTo = safeRedirect(formData.get('redirectTo'), '/dashboard')
-
-  invariant(typeof email === 'string', 'Email is required')
-  invariant(typeof username === 'string', 'Username is required')
-  invariant(typeof password === 'string', 'Password is required')
-
-  const errors: FormError = {}
-
-  errors.email = !validateEmail(email) ? 'Email is invalid' : null
-
-  errors.password = !password ? 'Password is required' : null
-  errors.password =
-    password.length < 8 ? 'Password must contains at least 8 characters' : null
-
-  errors.username = !username ? 'Username is required' : null
-  errors.username =
-    username.length < 3 ? 'Username must contains at least 3 characters' : null
-
-  if (await getUserByEmail(email))
-    errors.email = 'A user already exists with this email'
-  if (await getUserByUsername(username))
-    errors.username = 'A user already exists with this username'
-
-  if (Object.values(errors).some((value) => value !== null))
-    return json<ActionData>(
-      {
-        errors,
-      },
-      { status: 400 }
-    )
-
-  const user = await createUser({ email, password, username })
-
-  return createUserSession({
-    redirectTo,
-    remember: false,
-    request,
-    userId: user.id,
-  })
-}
+export const loader = loaderFn
+export const action = actionFn
 
 export const meta: V2_MetaFunction = () => [{ title: 'Sign Up' }]
 

@@ -1,5 +1,4 @@
-import type { ActionArgs, LoaderArgs, V2_MetaFunction } from '@remix-run/node'
-import { json, redirect } from '@remix-run/node'
+import type { V2_MetaFunction } from '@remix-run/node'
 import {
   Form,
   Link,
@@ -8,57 +7,15 @@ import {
   useSearchParams,
 } from '@remix-run/react'
 
-import { verifyLogin } from '~/models/user.server'
-import { createUserSession, getUserId } from '~/session.server'
-import { safeRedirect, validateEmail } from '~/utils'
-import invariant from 'tiny-invariant'
-
-type ActionData = {
-  errors: {
-    email: string | null
-    password: string | null
-  }
-}
+import { loaderFn } from './loader'
+import { actionFn } from './action'
+import type { ActionData } from './action'
 
 export const meta: V2_MetaFunction = () => [{ title: 'Login' }]
 
-export const loader = async ({ request }: LoaderArgs) => {
-  const userId = await getUserId(request)
-  if (userId) return redirect('/dashboard')
-  return json({})
-}
+export const loader = loaderFn
 
-export const action = async ({ request }: ActionArgs) => {
-  const formData = await request.formData()
-  const email = formData.get('email')
-  const password = formData.get('password')
-  const redirectTo = safeRedirect(formData.get('redirectTo'), '/dashboard')
-  const remember = formData.get('remember')
-
-  invariant(typeof email === 'string', 'Email is required')
-  invariant(typeof password === 'string', 'Password is required')
-
-  const errors: ActionData['errors'] = {
-    email: !validateEmail(email) ? 'Email is invalid' : null,
-    password: !password ? 'Password is required' : null,
-  }
-
-  const user = await verifyLogin(email, password)
-
-  errors.email = !user ? 'Invalid email or password' : null
-
-  if (Object.values(errors).some((value) => value !== null))
-    return json<ActionData>({ errors })
-
-  invariant(user !== null, 'User must be defined')
-
-  return createUserSession({
-    redirectTo,
-    remember: remember === 'on',
-    request,
-    userId: user.id,
-  })
-}
+export const action = actionFn
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams()

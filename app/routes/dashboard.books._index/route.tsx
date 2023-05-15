@@ -1,19 +1,9 @@
-import { json } from '@remix-run/node'
-import { getBooksWithAuthor } from '~/models/book.server'
-
-import type { LoaderArgs, LoaderFunction } from '@remix-run/node'
 import { Link, useFetcher, useLoaderData } from '@remix-run/react'
 import { excerpt } from '~/utils'
+import { loaderFn } from './loader'
+import type { LoaderData } from './loader'
 
-type LoaderData = {
-  books: Awaited<ReturnType<typeof getBooksWithAuthor>>
-}
-
-export const loader: LoaderFunction = async (args: LoaderArgs) => {
-  const books = await getBooksWithAuthor()
-
-  return json<LoaderData>({ books })
-}
+export const loader = loaderFn
 
 const cellClassName = 'border border-slate-300 px-4 py-2 truncate'
 
