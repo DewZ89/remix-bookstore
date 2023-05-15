@@ -1,3 +1,3 @@
 export default function DashboardIndexPage() {
-  return <p>Dashboard</p>
+  return <h2 className='text-2xl'>Welcome to the Bookstore App</h2>
 }
