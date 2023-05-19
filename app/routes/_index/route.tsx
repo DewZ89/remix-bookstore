@@ -6,10 +6,11 @@ import {
   useNavigation,
   useSearchParams,
 } from '@remix-run/react'
+import { parse } from '@conform-to/zod'
 
 import { loaderFn } from './loader'
-import { actionFn } from './action'
-import type { ActionData } from './action'
+import { actionFn, schema } from './action'
+import { useForm, conform } from '@conform-to/react'
 
 export const meta: V2_MetaFunction = () => [{ title: 'Login' }]
 
@@ -18,43 +19,47 @@ export const loader = loaderFn
 export const action = actionFn
 
 export default function LoginPage() {
+  const lastSubmission = useActionData<typeof action>()
+
   const [searchParams] = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard'
-  const { errors } = useActionData<ActionData>() || {}
+  const redirectToFromUrl = searchParams.get('redirectTo') || '/dashboard'
+
+  const [form, { email, password, remember, redirectTo }] = useForm({
+    lastSubmission,
+    onValidate: ({ formData }) => parse(formData, { schema }),
+    shouldValidate: 'onBlur',
+    id: 'login-form',
+  })
 
   const { state } = useNavigation()
   const submitting = ['loading', 'submitting'].includes(state)
 
   return (
     <div className='flex min-h-full flex-col justify-center bg-gray-50'>
-      <div className='transition-tranform mx-auto my-4 w-full max-w-md origin-bottom-left text-center text-2xl tracking-wide duration-75 hover:-rotate-2'>
+      <div className='mx-auto my-4 w-full max-w-md origin-bottom-left text-center text-2xl tracking-wide transition-transform duration-75 hover:-rotate-2'>
         Login to enjoy Bookstore!
       </div>
       <div className='border-1 mx-auto w-full max-w-md rounded-md border-gray-500 bg-slate-100 px-10 py-8 opacity-90 shadow'>
-        <Form method='post' className='space-y-6'>
+        <Form method='post' className='space-y-6' {...form.props}>
+          {!!form.error && <p className='my-1 text-red-700'>{form.error}</p>}
           <div>
             <label
-              htmlFor='email'
+              htmlFor={email.id}
               className='block text-sm font-medium text-gray-700'
             >
               Email address
             </label>
             <div className='mt-1'>
               <input
-                id='email'
+                {...conform.input(email, { type: 'email' })}
+                id={email.id}
                 required
-                autoFocus={true}
-                name='email'
-                type='email'
-                autoComplete='email'
                 defaultValue='admin@remix.run'
-                aria-invalid={errors?.email ? true : undefined}
-                aria-describedby='email-error'
                 className='w-full rounded border border-gray-500 px-2 py-1 text-lg'
               />
-              {!!errors?.email && (
+              {email.error && (
                 <div className='pt-1 text-red-700' id='email-error'>
-                  {errors.email}
+                  {email.error}
                 </div>
               )}
             </div>
@@ -62,33 +67,35 @@ export default function LoginPage() {
 
           <div>
             <label
-              htmlFor='password'
+              htmlFor={password.id}
               className='block text-sm font-medium text-gray-700'
             >
               Password
             </label>
             <div className='mt-1'>
               <input
-                id='password'
-                name='password'
-                type='password'
+                {...conform.input(password, { type: 'password' })}
                 defaultValue='password'
                 autoComplete='current-password'
-                aria-invalid={errors?.password ? true : undefined}
-                aria-describedby='password-error'
                 className='w-full rounded border border-gray-500 px-2 py-1 text-lg'
               />
-              {!!errors?.password && (
+              {password.error && (
                 <div className='pt-1 text-red-700' id='password-error'>
-                  {errors.password}
+                  {password.error}
                 </div>
               )}
             </div>
           </div>
 
-          <input type='hidden' name='redirectTo' value={redirectTo} />
+          <input
+            type='hidden'
+            name={redirectTo.name}
+            defaultValue={redirectToFromUrl}
+          />
           <button
             type='submit'
+            name={conform.INTENT}
+            value='submit'
             className='w-full rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:bg-blue-400 active:bg-blue-700 disabled:bg-blue-200'
           >
             {submitting ? 'Login...' : 'Log In'}
@@ -96,13 +103,11 @@ export default function LoginPage() {
           <div className='flex items-center justify-between'>
             <div className='flex items-center'>
               <input
-                id='remember'
-                name='remember'
-                type='checkbox'
+                {...conform.input(remember, { type: 'checkbox' })}
                 className='h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500'
               />
               <label
-                htmlFor='remember'
+                htmlFor={remember.id}
                 className='ml-2 block text-sm text-gray-900'
               >
                 Remember me

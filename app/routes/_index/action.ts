@@ -1,9 +1,11 @@
+import { parse } from '@conform-to/zod'
 import type { ActionFunction } from '@remix-run/node'
 import { json } from '@remix-run/node'
 import invariant from 'tiny-invariant'
+import { z } from 'zod'
 import { verifyLogin } from '~/models/user.server'
 import { createUserSession } from '~/session.server'
-import { safeRedirect, validateEmail } from '~/utils'
+import { safeRedirect } from '~/utils'
 
 export type ActionData = {
   errors: {
@@ -12,33 +14,52 @@ export type ActionData = {
   }
 }
 
+export const schema = z.object({
+  email: z.coerce
+    .string()
+    .min(1, 'Email is required')
+    .email('Email must be valid'),
+  password: z.coerce.string().min(1, 'Password is required'),
+  redirectTo: z.coerce.string().min(1, 'Redirect URL is required'),
+  remember: z.coerce.string().nullable(),
+})
+
 export const actionFn: ActionFunction = async ({ request }) => {
   const formData = await request.formData()
-  const email = formData.get('email')
-  const password = formData.get('password')
-  const redirectTo = safeRedirect(formData.get('redirectTo'), '/dashboard')
-  const remember = formData.get('remember')
+  const submission = parse(formData, { schema })
 
-  invariant(typeof email === 'string', 'Email is required')
-  invariant(typeof password === 'string', 'Password is required')
+  const redirectTo = safeRedirect(submission.value?.redirectTo, '/dashboard')
 
-  const errors: ActionData['errors'] = {
-    email: !validateEmail(email) ? 'Email is invalid' : null,
-    password: !password ? 'Password is required' : null,
-  }
+  if (!submission.value || submission.intent !== 'submit')
+    return json(
+      {
+        submission: {
+          ...submission,
+          payload: { ...submission.payload, redirectTo },
+        },
+      },
+      { status: 400 }
+    )
 
-  const user = await verifyLogin(email, password)
+  invariant(submission.value, 'form cannot be empty')
 
-  errors.email = !user ? 'Invalid email or password' : null
+  const user = await verifyLogin(
+    submission.value.email,
+    submission.value.password
+  )
 
-  if (Object.values(errors).some((value) => value !== null))
-    return json<ActionData>({ errors })
-
-  invariant(user !== null, 'User must be defined')
+  if (!user)
+    return json(
+      {
+        ...submission,
+        error: { '': 'Invalid email/password' },
+      },
+      { status: 400 }
+    )
 
   return createUserSession({
     redirectTo,
-    remember: remember === 'on',
+    remember: submission.value.remember === 'on',
     request,
     userId: user.id,
   })

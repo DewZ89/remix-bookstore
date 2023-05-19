@@ -33,6 +33,8 @@
     "/public/build"
   ],
   "dependencies": {
+    "@conform-to/react": "^0.6.1",
+    "@conform-to/zod": "^0.6.1",
     "@prisma/client": "^4.12.0",
     "@remix-run/css-bundle": "^1.16.0",
     "@remix-run/node": "^1.16.0",
