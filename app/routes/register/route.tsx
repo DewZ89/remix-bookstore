@@ -6,11 +6,9 @@ import {
   useNavigation,
   useSearchParams,
 } from '@remix-run/react'
-import { useState } from 'react'
-import type { ChangeEvent } from 'react'
-
-import { actionFn } from './action'
-import type { ActionData } from './action'
+import { useForm, conform } from '@conform-to/react'
+import { parse } from '@conform-to/zod'
+import { actionFn, schema } from './action'
 import { loaderFn } from './loader'
 
 export const loader = loaderFn
@@ -19,22 +17,21 @@ export const action = actionFn
 export const meta: V2_MetaFunction = () => [{ title: 'Sign Up' }]
 
 export default function Join() {
-  const [searchParams] = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') ?? undefined
-  const { errors } = useActionData<ActionData>() || {}
+  const lastSubmission = useActionData<typeof action>()
 
-  const [username, setUsername] = useState('')
+  const [form, { email, username, password, redirectTo }] = useForm({
+    lastSubmission,
+    shouldValidate: 'onBlur',
+    onValidate({ formData }) {
+      return parse(formData, { schema })
+    },
+  })
+
+  const [searchParams] = useSearchParams()
+  const redirectToFromUrl = searchParams.get('redirectTo') ?? undefined
 
   const { state } = useNavigation()
   const submitting = state === 'submitting' || state === 'loading'
-
-  function onEmailChange(e: ChangeEvent<HTMLInputElement>) {
-    setUsername(e.target.value.split('@')[0])
-  }
-
-  function onChangeUsername(e: ChangeEvent<HTMLInputElement>) {
-    setUsername(e.target.value)
-  }
 
   return (
     <div className='flex min-h-full flex-col justify-center bg-gray-50'>
@@ -42,34 +39,29 @@ export default function Join() {
         Join Bookstore Universe!
       </div>
       <div className='border-1 mx-auto w-full max-w-md rounded-md border-gray-500 bg-slate-100 px-10 py-8 opacity-90 shadow'>
-        <Form method='post' className='space-y-6'>
+        <Form method='post' className='space-y-6' {...form.props}>
           <div>
             <label
-              htmlFor='email'
+              htmlFor={email.id}
               className='block text-sm font-medium text-gray-700'
             >
               Email address
             </label>
             <div className='mt-1'>
               <input
-                id='email'
+                {...conform.input(email, { type: 'email' })}
                 required
                 autoFocus={true}
-                name='email'
-                type='email'
                 autoComplete='email'
-                aria-invalid={errors?.email ? true : undefined}
-                aria-describedby='email-error'
                 className='w-full rounded border border-gray-500 px-2 py-1 text-lg'
-                onChange={onEmailChange}
               />
-              {Boolean(errors?.email) && (
+              {email.error && (
                 <div
                   className='pt-1 text-red-700'
-                  id='email-error'
+                  id={email.errorId}
                   role='alert'
                 >
-                  {errors?.email}
+                  {email.error}
                 </div>
               )}
             </div>
@@ -84,23 +76,18 @@ export default function Join() {
             </label>
             <div className='mt-1'>
               <input
-                id='username'
+                {...conform.input(username)}
                 required
-                name='username'
-                value={username}
-                onChange={onChangeUsername}
                 type='text'
-                aria-invalid={errors?.username ? true : undefined}
-                aria-describedby='username-error'
                 className='w-full rounded border border-gray-500 px-2 py-1 text-lg'
               />
-              {Boolean(errors?.username) && (
+              {username.error && (
                 <div
                   className='pt-1 text-red-700'
-                  id='username-error'
+                  id={username.errorId}
                   role='alert'
                 >
-                  {errors?.username}
+                  {username.error}
                 </div>
               )}
             </div>
@@ -115,28 +102,28 @@ export default function Join() {
             </label>
             <div className='mt-1'>
               <input
-                id='password'
-                name='password'
-                type='password'
+                {...conform.input(password, { type: 'password' })}
                 required
                 autoComplete='new-password'
-                aria-invalid={errors?.password ? true : undefined}
-                aria-describedby='password-error'
                 className='w-full rounded border border-gray-500 px-2 py-1 text-lg'
               />
-              {Boolean(errors?.password) && (
+              {password.error && (
                 <div
                   className='pt-1 text-red-700'
-                  id='password-error'
+                  id={password.errorId}
                   role='alert'
                 >
-                  {errors?.password}
+                  {password.error}
                 </div>
               )}
             </div>
           </div>
 
-          <input type='hidden' name='redirectTo' value={redirectTo} />
+          <input
+            {...conform.input(redirectTo, { type: 'hidden' })}
+            type='hidden'
+            defaultValue={redirectToFromUrl}
+          />
           <button
             type='submit'
             disabled={submitting}

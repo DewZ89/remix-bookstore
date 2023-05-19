@@ -88,8 +88,7 @@ export default function LoginPage() {
           </div>
 
           <input
-            type='hidden'
-            name={redirectTo.name}
+            {...conform.input(redirectTo, { hidden: true })}
             defaultValue={redirectToFromUrl}
           />
           <button

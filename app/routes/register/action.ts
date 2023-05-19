@@ -1,13 +1,14 @@
+import { parse } from '@conform-to/zod'
 import type { ActionFunction } from '@remix-run/node'
 import { json } from '@remix-run/node'
-import invariant from 'tiny-invariant'
+import { z } from 'zod'
 import {
   createUser,
   getUserByEmail,
   getUserByUsername,
 } from '~/models/user.server'
 import { createUserSession } from '~/session.server'
-import { safeRedirect, validateEmail } from '~/utils'
+import { safeRedirect } from '~/utils'
 
 type FormError = {
   username?: string | null
@@ -19,43 +20,54 @@ export type ActionData = {
   errors: FormError
 }
 
+export const schema = z.object({
+  username: z.coerce.string().min(3, 'Username must contains 3 chars or more'),
+  email: z.coerce
+    .string()
+    .min(1, 'Email is required')
+    .email('Email must be valid'),
+  password: z.coerce.string().min(8, 'Password must contains 8 or more chars'),
+  redirectTo: z.coerce.string().optional(),
+})
+
+async function validateUniqueConstraint(formValue: z.infer<typeof schema>) {
+  const error: Record<string, string | undefined> = {}
+
+  if (await getUserByEmail(formValue.email))
+    error.email = 'A user already exists with this email'
+  if (await getUserByUsername(formValue.username))
+    error.username = 'A user already exists with this username'
+
+  return error
+}
+
 export const actionFn: ActionFunction = async ({ request }) => {
   const formData = await request.formData()
-  const email = formData.get('email')
-  const password = formData.get('password')
-  const username = formData.get('username')
-  const redirectTo = safeRedirect(formData.get('redirectTo'), '/dashboard')
+  const submission = parse(formData, { schema })
 
-  invariant(typeof email === 'string', 'Email is required')
-  invariant(typeof username === 'string', 'Username is required')
-  invariant(typeof password === 'string', 'Password is required')
+  const redirectTo = safeRedirect(submission.value?.redirectTo, '/dashboard')
 
-  const errors: FormError = {}
-
-  errors.email = !validateEmail(email) ? 'Email is invalid' : null
-
-  errors.password = !password ? 'Password is required' : null
-  errors.password =
-    password.length < 8 ? 'Password must contains at least 8 characters' : null
-
-  errors.username = !username ? 'Username is required' : null
-  errors.username =
-    username.length < 3 ? 'Username must contains at least 3 characters' : null
-
-  if (await getUserByEmail(email))
-    errors.email = 'A user already exists with this email'
-  if (await getUserByUsername(username))
-    errors.username = 'A user already exists with this username'
-
-  if (Object.values(errors).some((value) => value !== null))
-    return json<ActionData>(
+  if (!submission.value || submission.intent !== 'submit')
+    return json(
       {
-        errors,
+        submission: {
+          ...submission,
+          payload: { ...submission.payload, redirectTo },
+        },
       },
       { status: 400 }
     )
 
-  const user = await createUser({ email, password, username })
+  const error = await validateUniqueConstraint(submission.value)
+
+  if (Object.values(error).some((value) => value !== undefined))
+    return json({ ...submission, error }, { status: 400 })
+
+  const user = await createUser({
+    email: submission.value.email,
+    password: submission.value.password,
+    username: submission.value.username,
+  })
 
   return createUserSession({
     redirectTo,
