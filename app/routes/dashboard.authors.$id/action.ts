@@ -1,41 +1,24 @@
+import { parse } from '@conform-to/zod'
 import type { ActionFunction } from '@remix-run/node'
 import { json, redirect } from '@remix-run/node'
 import invariant from 'tiny-invariant'
-import type { ZodError } from 'zod'
 import { z } from 'zod'
-import { zx } from 'zodix'
 import {
   createAuthor,
   deleteAuthor,
   updateAuthor,
 } from '~/models/author.server'
 import { getUser } from '~/session.server'
-import { errorAtPath } from '~/utils'
 
-export type ActionData = {
-  errors: {
-    name?: string
-    bio?: string
-  }
-}
-
-const authorSchema = z.object({
+export const schema = z.object({
   name: z.coerce.string().min(6, 'Name must contains at least 6 chars'),
   bio: z.coerce.string().optional(),
   _action: z.coerce.string(),
 })
 
-type AuthorSchema = z.infer<typeof authorSchema>
-
-function buildErrors(errors: ZodError): ActionData['errors'] {
-  return {
-    name: errorAtPath<AuthorSchema>(errors, 'name'),
-    bio: errorAtPath<AuthorSchema>(errors, 'bio'),
-  }
-}
-
 export const actionFn: ActionFunction = async ({ params, request }) => {
-  const parseResults = await zx.parseFormSafe(request, authorSchema)
+  const formData = await request.formData()
+  const submission = parse(formData, { schema })
 
   const id = params.id
   const user = await getUser(request)
@@ -43,25 +26,25 @@ export const actionFn: ActionFunction = async ({ params, request }) => {
   invariant(id, 'Id param is required')
   invariant(user !== null, 'User is required')
 
-  if (!parseResults.success) {
-    return json<ActionData>(
-      { errors: buildErrors(parseResults.error) },
-      { status: 400 }
-    )
+  if (
+    !submission.value ||
+    !['new', 'update', 'delete'].includes(submission.intent)
+  ) {
+    return json({ submission }, { status: 400 })
   }
 
-  const data = parseResults.success ? parseResults.data : null
-  invariant(data !== null, 'Data cannot be null')
-
-  if (data._action === 'new')
+  if (submission.intent === 'new')
     await createAuthor({
       userId: user.id,
-      name: data.name,
-      bio: String(data.bio),
+      name: submission.value.name,
+      bio: String(submission.value.bio),
     })
-  if (data._action === 'update')
-    await updateAuthor(id, { name: data.name, bio: data.bio })
-  if (data._action === 'delete') await deleteAuthor(id)
+  if (submission.intent === 'update')
+    await updateAuthor(id, {
+      name: submission.value.name,
+      bio: submission.value.bio,
+    })
+  if (submission.intent === 'delete') await deleteAuthor(id)
 
   return redirect('/dashboard/authors')
 }

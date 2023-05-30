@@ -5,11 +5,11 @@ import {
   useNavigation,
 } from '@remix-run/react'
 import type { V2_MetaFunction } from '@remix-run/node'
+import { useForm, conform } from '@conform-to/react'
+import { parse } from '@conform-to/zod'
 
-import { loaderFn } from './loader'
-import type { LoaderData } from './loader'
-import type { ActionData } from './action'
-import { actionFn } from './action'
+import { loaderFn, type LoaderData } from './loader'
+import { schema, actionFn } from './action'
 
 export const meta: V2_MetaFunction = ({ data: { author } }) => {
   let title = 'Create author'
@@ -25,6 +25,13 @@ export const loader = loaderFn
 export const action = actionFn
 
 export default function AuthorForm() {
+  const lastSubmission = useActionData<typeof action>()
+  const [form, { name, bio }] = useForm({
+    lastSubmission,
+    onValidate: ({ formData }) => parse(formData, { schema }),
+    shouldValidate: 'onBlur',
+  })
+
   const { state, formData } = useNavigation()
   const isLoading = state === 'loading'
   const isSubmitting = state === 'submitting'
@@ -32,7 +39,6 @@ export default function AuthorForm() {
   const isTransitioning = isSubmitting || isLoading
 
   const { author } = useLoaderData<LoaderData>()
-  const { errors } = useActionData<ActionData>() || {}
 
   const isEditing = isTransitioning && formData?.get('_action') === 'update'
   const isCreating = isTransitioning && formData?.get('_action') === 'new'
@@ -44,30 +50,30 @@ export default function AuthorForm() {
       <p className='text-2xl'>
         {author ? `Edit ${author.name}` : 'Create a new author'}
       </p>
-      <Form method='post' className='flex w-1/3 flex-col space-y-4'>
+      <Form
+        method='post'
+        className='flex w-1/3 flex-col space-y-4'
+        {...form.props}
+      >
         <div>
           <label htmlFor='name' className='text-sm font-medium text-gray-700'>
             Name
           </label>
           <div className='mt-1'>
             <input
+              {...conform.input(name)}
               className='w-full rounded border border-gray-500 px-2 py-1 text-lg'
-              type='text'
-              name='name'
-              id='name'
               required
               defaultValue={author?.name}
-              aria-invalid={errors?.name ? true : undefined}
-              aria-describedby='name-error'
-              autoFocus={true}
+              // autoFocus={true}
             />
-            {!!errors?.name && (
+            {name.error && (
               <div
                 role='alert'
-                id='name-error'
+                id={name.errorId}
                 className='pt-1 text-sm text-red-700'
               >
-                {errors.name}
+                {name.error}
               </div>
             )}
           </div>
@@ -79,21 +85,18 @@ export default function AuthorForm() {
           </label>
           <div className='mt-1'>
             <textarea
-              name='bio'
-              id='bio'
+              {...conform.textarea(bio)}
               rows={5}
-              aria-invalid={errors?.bio ? true : undefined}
               defaultValue={author?.bio}
-              aria-describedby='bio-error'
               className='w-full resize-none rounded border border-gray-500 px-2 py-1 text-lg'
             ></textarea>
-            {!!errors?.bio && (
+            {bio.error && (
               <div
                 role='alert'
-                id='name-error'
+                id={bio.errorId}
                 className='pt-1 text-sm text-red-700'
               >
-                {errors.bio}
+                {bio.error}
               </div>
             )}
           </div>
@@ -105,7 +108,7 @@ export default function AuthorForm() {
               disabled={isTransitioning}
               type='submit'
               value='delete'
-              name='_action'
+              name={conform.INTENT}
               className='rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600 focus:bg-red-400 active:bg-red-700 disabled:bg-red-200'
             >
               {isDeleting ? 'Deleting author' : 'Delete author'}
@@ -113,7 +116,7 @@ export default function AuthorForm() {
           )}
 
           <button
-            name='_action'
+            name={conform.INTENT}
             value={author ? 'update' : 'new'}
             type='submit'
             disabled={isTransitioning}
